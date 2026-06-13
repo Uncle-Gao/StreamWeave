@@ -1,0 +1,10 @@
+.DS_Store
+.build/
+node_modules/
+dist/
+src-tauri/target/
+DerivedData/
+*.xcuserdata/
+*.xcuserstate
+VideoDownloaderTasks/
+会话记录.md

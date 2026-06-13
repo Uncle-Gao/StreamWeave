@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StreamWeave</title>
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("streamweave-theme") || "auto";
+          const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const theme = saved === "dark" ? "dark" : saved === "light" ? "light" : dark ? "dark" : "light";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.setProperty("--boot-bg", theme === "dark" ? "#101419" : "#eef2f6");
+        } catch {
+          document.documentElement.dataset.theme = "light";
+          document.documentElement.style.setProperty("--boot-bg", "#eef2f6");
+        }
+      })();
+    </script>
+    <style>
+      html {
+        color-scheme: light dark;
+        background: var(--boot-bg, #eef2f6);
+      }
+
+      body {
+        visibility: hidden;
+        background: inherit;
+      }
+
+      html.app-ready body {
+        visibility: visible;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app">
+      <section id="main-page" class="app-page main-page">
+        <header class="app-header">
+          <div class="header-copy">
+            <h1>StreamWeave</h1>
+            <p>多任务 HLS 下载队列，可在设置中调整同时运行任务数</p>
+          </div>
+          <div class="header-controls">
+            <div class="theme-switcher" role="group" aria-label="主题模式">
+              <button type="button" class="theme-button" data-theme-mode="light">亮</button>
+              <button type="button" class="theme-button" data-theme-mode="dark">暗</button>
+              <button type="button" class="theme-button" data-theme-mode="auto">自动</button>
+            </div>
+            <button id="settings-button" class="icon-button" type="button" aria-label="设置" title="设置">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" />
+                <path d="M19.4 13.5a7.8 7.8 0 0 0 .1-1.5 7.8 7.8 0 0 0-.1-1.5l2-1.5-2-3.4-2.4 1a7.2 7.2 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.6A7.2 7.2 0 0 0 7 6.6l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0-.1 1.5 7.8 7.8 0 0 0 .1 1.5l-2 1.5 2 3.4 2.4-1a7.2 7.2 0 0 0 2.6 1.5l.4 2.6h4l.4-2.6a7.2 7.2 0 0 0 2.6-1.5l2.4 1 2-3.4-2-1.5Z" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <section class="input-pane">
+          <label class="field field-wide">
+            <span>URL</span>
+            <input id="url-input" type="url" placeholder="https://example.com/video.m3u8 或视频网页 URL" autocomplete="off" />
+          </label>
+
+          <label class="field">
+            <span>输出文件名</span>
+            <input id="filename-input" type="text" placeholder="留空则自动生成" />
+          </label>
+
+          <div class="actions">
+            <button id="start-button">加入队列</button>
+          </div>
+        </section>
+
+        <section class="workspace">
+          <aside class="task-list-pane">
+            <div class="pane-header">
+              <strong>任务</strong>
+              <span id="active-summary">0 运行 · 0 排队</span>
+            </div>
+            <div class="task-toolbar">
+              <label class="task-select-all">
+                <input id="select-all-tasks" type="checkbox" />
+                <span id="selected-summary">未选择</span>
+              </label>
+              <div class="task-batch-actions">
+                <button id="batch-pause-button" type="button" disabled title="暂停所选任务">暂停</button>
+                <button id="batch-resume-button" type="button" disabled title="继续所选任务">继续</button>
+                <button id="batch-cancel-button" type="button" disabled title="取消所选任务">取消</button>
+                <button id="batch-retry-button" type="button" disabled title="重试所选任务">重试</button>
+                <button id="batch-delete-button" type="button" disabled title="删除所选记录">删除</button>
+              </div>
+            </div>
+            <div id="task-list" class="task-list" aria-label="任务列表"></div>
+          </aside>
+
+          <section class="detail-pane">
+            <div class="pane-header detail-pane-title">
+              <strong>任务详情</strong>
+            </div>
+            <div class="detail-body">
+            <div class="detail-header">
+              <div>
+                <strong id="detail-title">未选择任务</strong>
+                <p id="detail-subtitle">提交 URL 后会在这里显示任务详情。</p>
+              </div>
+            </div>
+
+            <div class="status-pane">
+              <div class="status-row">
+                <strong id="stage-label">准备就绪</strong>
+                <span id="segment-label">0 / 0 分片</span>
+              </div>
+              <progress id="progress" value="0" max="1"></progress>
+              <p id="summary"></p>
+              <p id="task-directory"></p>
+              <div class="file-actions">
+                <button id="open-button" disabled>打开文件</button>
+                <button id="reveal-button" disabled>在 Finder 中显示</button>
+              </div>
+            </div>
+
+            <section class="log-panel">
+              <div class="log-header">
+                <div class="log-title">任务日志</div>
+                <button id="copy-log-button" type="button" disabled>复制日志</button>
+              </div>
+              <pre id="log-output">等待开始...</pre>
+            </section>
+            </div>
+          </section>
+        </section>
+      </section>
+
+      <div id="duplicate-dialog" class="modal-backdrop" hidden>
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="duplicate-dialog-title">
+          <h2 id="duplicate-dialog-title">该 URL 已下载过</h2>
+          <p id="duplicate-dialog-message"></p>
+          <div class="modal-actions">
+            <button id="duplicate-open-button" type="button">打开已下载文件</button>
+            <button id="duplicate-redownload-button" type="button">重新下载</button>
+            <button id="duplicate-cancel-button" type="button">取消</button>
+          </div>
+        </section>
+      </div>
+
+      <section id="settings-page" class="app-page settings-page" hidden>
+        <header class="app-header">
+          <div class="header-copy">
+            <h1>设置</h1>
+            <p>配置解析方式、工具路径和外部命令参数</p>
+          </div>
+          <div class="header-controls">
+            <button id="settings-close-button" type="button">返回</button>
+          </div>
+        </header>
+
+        <section class="settings-panel">
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <strong>下载</strong>
+            </div>
+            <div class="settings-grid">
+              <div class="field directory-setting">
+                <span>下载目录</span>
+                <div class="directory-selector">
+                  <div id="download-directory-display" class="directory-display">默认使用 Downloads</div>
+                  <button id="choose-directory-button" type="button">选择目录</button>
+                  <button id="reset-directory-button" type="button">恢复默认</button>
+                </div>
+              </div>
+              <label class="field concurrency-setting">
+                <span>同时下载任务数（最多 8）</span>
+                <input id="max-concurrent-input" type="number" min="1" max="8" step="1" inputmode="numeric" />
+                <small>超过数量的任务会自动排队，默认 3 个。</small>
+              </label>
+              <label class="field concurrency-setting">
+                <span>全局解密并行数（最多 16）</span>
+                <input id="decrypt-workers-input" type="number" min="1" max="16" step="1" inputmode="numeric" />
+                <small>所有任务共享该解密槽位，默认 4 个。</small>
+              </label>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <strong>网页解析</strong>
+            </div>
+            <div class="settings-grid">
+              <label class="field browser-mode-setting">
+                <span>浏览器模式</span>
+                <select id="browser-mode-input">
+                  <option value="headless">无头浏览器</option>
+                  <option value="background">后台窗口</option>
+                  <option value="headed">可见窗口</option>
+                </select>
+                <small>默认使用可见窗口，适合需要登录、点播放或过验证的网页。</small>
+              </label>
+              <div class="browser-mode-help">
+                <p><strong>无头浏览器</strong>：不显示窗口，干扰最少，但部分网站会识别无头环境而不生成 m3u8。</p>
+                <p><strong>后台窗口</strong>：使用有界面 Chromium 并放到屏幕外，适合不想被弹窗打断、但无头模式失败的网页。</p>
+                <p><strong>可见窗口</strong>：正常显示浏览器窗口，适合需要登录、验证码、手动点击播放或观察页面状态的网页。</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <strong>工具路径</strong>
+            </div>
+            <div class="settings-grid">
+              <label class="field">
+                <span>ffmpeg 路径</span>
+                <input id="ffmpeg-path-input" type="text" placeholder="留空自动查找" />
+              </label>
+              <label class="field">
+                <span>ffprobe 路径</span>
+                <input id="ffprobe-path-input" type="text" placeholder="留空自动查找" />
+              </label>
+              <label class="field">
+                <span>aria2c 路径</span>
+                <input id="aria2c-path-input" type="text" placeholder="留空自动查找" />
+              </label>
+              <label class="field">
+                <span>Node 路径</span>
+                <input id="node-path-input" type="text" placeholder="留空自动查找" />
+              </label>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <strong>命令参数</strong>
+            </div>
+            <div class="settings-grid">
+              <label class="field">
+                <span>aria2 附加参数</span>
+                <input id="aria2-args-input" type="text" placeholder="例如 --max-tries=10 --retry-wait=3" />
+              </label>
+              <label class="field">
+                <span>ffmpeg 附加参数</span>
+                <input id="ffmpeg-args-input" type="text" placeholder="例如 -movflags +faststart" />
+              </label>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <strong>维护</strong>
+            </div>
+
+            <div class="maintenance-layout">
+              <div class="maintenance-row">
+                <div class="maintenance-copy">
+                  <strong>Homebrew</strong>
+                  <span id="homebrew-status">未检测</span>
+                </div>
+                <div class="maintenance-actions">
+                  <button id="check-homebrew-button" type="button">检测 Homebrew</button>
+                  <button id="open-homebrew-button" type="button">打开官网</button>
+                  <button id="copy-homebrew-command-button" type="button">复制安装命令</button>
+                </div>
+              </div>
+
+              <div class="maintenance-row">
+                <div class="maintenance-copy">
+                  <strong>工具检测</strong>
+                  <span>检查 ffmpeg、ffprobe、aria2c 和 Node 路径</span>
+                </div>
+                <div class="maintenance-actions">
+                  <button id="detect-tools-button" type="button">检测工具</button>
+                </div>
+              </div>
+
+              <div class="maintenance-row">
+                <div class="maintenance-copy">
+                  <strong>安装依赖</strong>
+                  <span>通过 Homebrew 分别安装缺失工具</span>
+                </div>
+                <div class="maintenance-actions install-actions">
+                  <button id="install-ffmpeg-button" type="button" disabled>安装 ffmpeg</button>
+                  <button id="install-aria2-button" type="button" disabled>安装 aria2</button>
+                  <button id="install-node-button" type="button" disabled>安装 Node</button>
+                </div>
+              </div>
+
+              <div class="maintenance-row maintenance-status-row">
+                <div class="maintenance-copy">
+                  <strong>状态</strong>
+                  <span id="settings-status">等待维护操作</span>
+                </div>
+                <div class="dependency-status-list" aria-label="依赖状态">
+                  <div class="dependency-status-item">
+                    <span>ffmpeg</span>
+                    <strong id="ffmpeg-tool-status">未检测</strong>
+                  </div>
+                  <div class="dependency-status-item">
+                    <span>aria2</span>
+                    <strong id="aria2-tool-status">未检测</strong>
+                  </div>
+                  <div class="dependency-status-item">
+                    <span>Node</span>
+                    <strong id="node-tool-status">未检测</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <section class="maintenance-log-panel" aria-label="维护日志">
+              <div class="log-header">
+                <div class="log-title">维护日志</div>
+                <div class="log-actions">
+                  <button id="copy-maintenance-log-button" type="button" disabled>复制日志</button>
+                  <button id="clear-maintenance-log-button" type="button" disabled>清空日志</button>
+                </div>
+              </div>
+              <pre id="maintenance-log-output">等待维护操作...</pre>
+            </section>
+          </section>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
