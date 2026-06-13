@@ -87,6 +87,31 @@ source "$HOME/.cargo/env"
 cargo check
 ```
 
+## 自动打包
+
+仓库包含 GitHub Actions 打包流程：
+
+```text
+.github/workflows/package.yml
+```
+
+触发方式：
+
+- 在 GitHub Actions 页面手动运行 `Package` workflow。
+- 推送 `v*` tag 自动打包并创建 GitHub Release，例如：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+当前 workflow 会构建 macOS 包：
+
+- `macos-13`：Intel `x86_64-apple-darwin`
+- `macos-14`：Apple Silicon `aarch64-apple-darwin`
+
+每次构建都会上传 workflow artifact；tag 构建还会把 `.dmg` 和 `.app.zip` 上传到 GitHub Release。当前未配置 Apple Developer ID 签名和公证，因此产物是未签名包。
+
 ## 使用方式
 
 主页面输入 URL 后点击“加入队列”：

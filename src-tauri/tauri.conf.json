@@ -27,6 +27,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": {
+      "../scripts/extract-m3u8.mjs": "scripts/extract-m3u8.mjs"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

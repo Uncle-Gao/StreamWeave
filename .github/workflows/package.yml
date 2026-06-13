@@ -1,0 +1,92 @@
+name: Package
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  package-macos:
+    name: macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: macos-13
+            target: x86_64-apple-darwin
+          - arch: arm64
+            runner: macos-14
+            target: aarch64-apple-darwin
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build Tauri bundle
+        run: npm run tauri -- build --target ${{ matrix.target }}
+
+      - name: Collect release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          bundle_dir="src-tauri/target/${{ matrix.target }}/release/bundle"
+
+          shopt -s nullglob
+          for dmg in "$bundle_dir"/dmg/*.dmg; do
+            base="$(basename "$dmg" .dmg)"
+            cp "$dmg" "release-assets/${base}-${{ matrix.arch }}.dmg"
+          done
+
+          for app in "$bundle_dir"/macos/*.app; do
+            base="$(basename "$app" .app)"
+            ditto -c -k --sequesterRsrc --keepParent "$app" "release-assets/${base}-${{ matrix.arch }}.app.zip"
+          done
+
+          if ! compgen -G "release-assets/*" > /dev/null; then
+            echo "No release assets were produced."
+            exit 1
+          fi
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreamWeave-macOS-${{ matrix.arch }}
+          path: release-assets/*
+          if-no-files-found: error
+
+      - name: Upload GitHub release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

@@ -1895,7 +1895,7 @@ fn run_browser_network_extract(
 ) -> Result<Vec<BrowserCandidate>, String> {
     let node = find_tool_with_override("node", ctx.settings.node_path.as_deref())
         .map_err(|_| "未找到 node，网页动态提取需要先安装 Node.js。".to_string())?;
-    let script = extractor_script_path()?;
+    let script = extractor_script_path(ctx)?;
     let browser_mode = BrowserLaunchMode::from_settings(&ctx.settings);
     fs::create_dir_all(&profile_dir).map_err(|error| error.to_string())?;
 
@@ -3584,14 +3584,19 @@ fn emit_task_update(app: &tauri::AppHandle, snapshot: TaskSnapshot) -> Result<()
         .map_err(|error| error.to_string())
 }
 
-fn extractor_script_path() -> Result<PathBuf, String> {
+fn extractor_script_path(ctx: &TaskContext) -> Result<PathBuf, String> {
     let cwd = env::current_dir().map_err(|error| error.to_string())?;
-    let candidates = [
-        cwd.join("scripts/extract-m3u8.mjs"),
+    let mut candidates = Vec::new();
+    if let Ok(resource_dir) = ctx.app.path().resource_dir() {
+        candidates.push(resource_dir.join("scripts/extract-m3u8.mjs"));
+        candidates.push(resource_dir.join("extract-m3u8.mjs"));
+    }
+    candidates.push(cwd.join("scripts/extract-m3u8.mjs"));
+    candidates.push(
         cwd.parent()
             .unwrap_or(cwd.as_path())
             .join("scripts/extract-m3u8.mjs"),
-    ];
+    );
     candidates
         .into_iter()
         .find(|path| path.exists())
