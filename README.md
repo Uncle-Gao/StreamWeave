@@ -198,6 +198,10 @@ com.uncle.streamweave
 - 直接读取 Chrome/Safari Cookie。
 - 破解私有加密或非标准混淆视频流。
 
+## 许可证
+
+本项目以 MIT License 开源，详见 [LICENSE](LICENSE)。
+
 ## 常用验证
 
 ```bash

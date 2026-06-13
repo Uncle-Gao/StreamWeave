@@ -3,6 +3,8 @@ name = "streamweave"
 version = "0.1.0"
 description = "A local HLS video downloader"
 authors = ["uncle"]
+license = "MIT"
+repository = "https://github.com/Uncle-Gao/StreamWeave"
 edition = "2021"
 
 [lib]
