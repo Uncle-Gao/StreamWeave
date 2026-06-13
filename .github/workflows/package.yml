@@ -3,11 +3,17 @@ name: Package
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
 permissions:
   contents: write
+
+concurrency:
+  group: package-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   package-macos:
@@ -46,9 +52,6 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
-
-      - name: Build frontend
-        run: npm run build
 
       - name: Build Tauri bundle
         run: npm run tauri -- build --target ${{ matrix.target }}

@@ -97,6 +97,7 @@ cargo check
 
 触发方式：
 
+- 推送到 `main` 分支自动打包，并在 workflow 运行结果中生成 artifact。
 - 在 GitHub Actions 页面手动运行 `Package` workflow。
 - 推送 `v*` tag 自动打包并创建 GitHub Release，例如：
 
@@ -110,7 +111,7 @@ git push origin v0.1.0
 - `macos-13`：Intel `x86_64-apple-darwin`
 - `macos-14`：Apple Silicon `aarch64-apple-darwin`
 
-每次构建都会上传 workflow artifact；tag 构建还会把 `.dmg` 和 `.app.zip` 上传到 GitHub Release。当前未配置 Apple Developer ID 签名和公证，因此产物是未签名包。
+每次构建都会上传 workflow artifact；tag 构建还会把 `.dmg` 和 `.app.zip` 上传到 GitHub Release。连续推送同一个分支或 tag 时，会自动取消该 ref 上仍在运行的旧打包任务。当前未配置 Apple Developer ID 签名和公证，因此产物是未签名包。
 
 ## 使用方式
 
