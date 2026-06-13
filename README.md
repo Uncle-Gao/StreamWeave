@@ -106,6 +106,8 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
+tag 构建会自动把应用版本同步为 tag 去掉 `v` 后的版本号。例如 `v0.2.0` 会打包出内部版本为 `0.2.0` 的应用；这个同步只发生在 CI 构建环境中，不会反写仓库文件。
+
 当前 workflow 会构建 macOS 包：
 
 - `macos-13`：Intel `x86_64-apple-darwin`

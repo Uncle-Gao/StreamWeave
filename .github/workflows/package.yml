@@ -53,6 +53,10 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Sync version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node scripts/sync-release-version.mjs "${GITHUB_REF_NAME#v}"
+
       - name: Build Tauri bundle
         run: npm run tauri -- build --target ${{ matrix.target }}
 
