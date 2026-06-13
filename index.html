@@ -39,7 +39,10 @@
       <section id="main-page" class="app-page main-page">
         <header class="app-header">
           <div class="header-copy">
-            <h1>StreamWeave</h1>
+            <div class="title-row">
+              <h1>StreamWeave</h1>
+              <span id="app-version" class="version-badge" aria-label="应用版本"></span>
+            </div>
             <p>多任务 HLS 下载队列，可在设置中调整同时运行任务数</p>
           </div>
           <div class="header-controls">
@@ -149,7 +152,7 @@
         <header class="app-header">
           <div class="header-copy">
             <h1>设置</h1>
-            <p>配置解析方式、工具路径和外部命令参数</p>
+            <p>配置解析方式、工具路径和外部命令参数 <span id="settings-app-version" class="inline-version"></span></p>
           </div>
           <div class="header-controls">
             <button id="settings-close-button" type="button">返回</button>

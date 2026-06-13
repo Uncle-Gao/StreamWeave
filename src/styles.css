@@ -148,12 +148,42 @@ select {
   min-width: 0;
 }
 
+.title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
 .app-header h1 {
   margin: 0;
   font-size: var(--font-size-title);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-tight);
   letter-spacing: 0;
+}
+
+.version-badge {
+  display: none;
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: var(--panel-bg-subtle);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+}
+
+.version-badge:not(:empty) {
+  display: inline-flex;
+}
+
+.inline-version {
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
 }
 
 .app-header p {

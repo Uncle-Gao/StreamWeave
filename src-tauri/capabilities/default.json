@@ -5,6 +5,7 @@
   "windows": ["main"],
   "permissions": [
     "core:event:default",
+    "core:app:allow-version",
     "core:app:allow-set-app-theme",
     "core:window:allow-is-focused",
     "core:window:allow-set-badge-count"

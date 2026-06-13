@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { setTheme } from "@tauri-apps/api/app";
+import { getVersion, setTheme } from "@tauri-apps/api/app";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import "./styles.css";
@@ -10,6 +10,8 @@ document.documentElement.classList.add("app-ready");
 const urlInput = document.querySelector("#url-input");
 const filenameInput = document.querySelector("#filename-input");
 const startButton = document.querySelector("#start-button");
+const appVersionLabel = document.querySelector("#app-version");
+const settingsAppVersionLabel = document.querySelector("#settings-app-version");
 const activeSummary = document.querySelector("#active-summary");
 const taskList = document.querySelector("#task-list");
 const selectAllTasksInput = document.querySelector("#select-all-tasks");
@@ -1333,6 +1335,20 @@ function scheduleToolStatusRefresh() {
   }, 500);
 }
 
+async function loadAppVersion() {
+  try {
+    const version = await getVersion();
+    const label = version ? `v${version}` : "";
+    appVersionLabel.textContent = label;
+    settingsAppVersionLabel.textContent = label ? `· ${label}` : "";
+    appVersionLabel.title = label ? `StreamWeave ${label}` : "";
+    settingsAppVersionLabel.title = label ? `StreamWeave ${label}` : "";
+  } catch {
+    appVersionLabel.textContent = "";
+    settingsAppVersionLabel.textContent = "";
+  }
+}
+
 checkHomebrewButton.addEventListener("click", () => {
   void checkHomebrewStatus({ log: true });
 });
@@ -1416,6 +1432,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 applyThemePreference();
+void loadAppVersion();
 applySettingsForm();
 void syncMaxConcurrentTasks({ silent: true });
 void syncDecryptWorkers({ silent: true });

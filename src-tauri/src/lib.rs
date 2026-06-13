@@ -1618,19 +1618,17 @@ fn find_tool_with_override(name: &str, override_path: Option<&str>) -> Result<Pa
         if path.exists() {
             return Ok(path);
         }
-        return Err(format!("配置的 {name} 路径不存在：{}", path.display()));
+        return Err(format!(
+            "配置的 {} 路径不存在：{}",
+            tool_display_name(name),
+            path.display()
+        ));
     }
     find_tool(name)
 }
 
 fn find_tool(name: &str) -> Result<PathBuf, String> {
-    for candidate in [
-        format!("/usr/local/bin/{name}"),
-        format!("/opt/homebrew/bin/{name}"),
-        format!("/usr/bin/{name}"),
-        format!("/bin/{name}"),
-    ] {
-        let path = PathBuf::from(candidate);
+    for path in default_tool_candidates(name) {
         if path.exists() {
             return Ok(path);
         }
@@ -1646,9 +1644,89 @@ fn find_tool(name: &str) -> Result<PathBuf, String> {
             return Ok(PathBuf::from(path));
         }
     }
-    Err(format!(
-        "未找到 {name}，请先安装：brew install ffmpeg aria2"
-    ))
+    Err(tool_missing_message(name))
+}
+
+fn default_tool_candidates(name: &str) -> Vec<PathBuf> {
+    let mut candidates = vec![
+        PathBuf::from(format!("/usr/local/bin/{name}")),
+        PathBuf::from(format!("/opt/homebrew/bin/{name}")),
+        PathBuf::from(format!("/usr/bin/{name}")),
+        PathBuf::from(format!("/bin/{name}")),
+    ];
+
+    if name == "node" {
+        append_node_manager_candidates(&mut candidates);
+    }
+
+    candidates
+}
+
+fn append_node_manager_candidates(candidates: &mut Vec<PathBuf>) {
+    let Ok(home) = env::var("HOME") else {
+        return;
+    };
+    let home = PathBuf::from(home);
+
+    candidates.push(home.join(".volta/bin/node"));
+    candidates.push(home.join(".asdf/shims/node"));
+    candidates.push(home.join(".nodenv/shims/node"));
+    candidates.push(home.join(".local/bin/node"));
+
+    append_versioned_node_candidates(candidates, &home.join(".nvm/versions/node"), "bin/node");
+    append_versioned_node_candidates(
+        candidates,
+        &home.join(".local/share/fnm/node-versions"),
+        "installation/bin/node",
+    );
+}
+
+fn append_versioned_node_candidates(candidates: &mut Vec<PathBuf>, root: &Path, suffix: &str) {
+    let Ok(entries) = fs::read_dir(root) else {
+        return;
+    };
+    let mut versioned_paths: Vec<PathBuf> = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join(suffix))
+        .collect();
+    versioned_paths.sort_by(|a, b| b.cmp(a));
+    candidates.extend(versioned_paths);
+}
+
+fn install_hint(name: &str) -> &'static str {
+    match name {
+        "ffmpeg" | "ffprobe" => "brew install ffmpeg",
+        "aria2c" => "brew install aria2",
+        "node" => "brew install node",
+        "brew" => "Homebrew 官方安装命令",
+        _ => "对应工具",
+    }
+}
+
+fn tool_display_name(name: &str) -> &'static str {
+    match name {
+        "node" => "Node.js",
+        "brew" => "Homebrew",
+        "aria2c" => "aria2c",
+        "ffmpeg" => "ffmpeg",
+        "ffprobe" => "ffprobe",
+        _ => "工具",
+    }
+}
+
+fn tool_missing_message(name: &str) -> String {
+    match name {
+        "node" => format!(
+            "未找到 Node.js。macOS 从 Finder 启动应用时不会加载 nvm/fnm 等 shell 配置；请在设置中填写 node 路径，或通过 Homebrew 安装：{}",
+            install_hint(name)
+        ),
+        "brew" => "未找到 Homebrew。请先安装 Homebrew，或确认 /opt/homebrew/bin/brew、/usr/local/bin/brew 可用。".to_string(),
+        _ => format!(
+            "未找到 {}。请在设置中填写工具路径，或安装：{}",
+            tool_display_name(name),
+            install_hint(name)
+        ),
+    }
 }
 
 fn http_client() -> Result<reqwest::blocking::Client, String> {
@@ -1894,7 +1972,7 @@ fn run_browser_network_extract(
     capture_mode: &str,
 ) -> Result<Vec<BrowserCandidate>, String> {
     let node = find_tool_with_override("node", ctx.settings.node_path.as_deref())
-        .map_err(|_| "未找到 node，网页动态提取需要先安装 Node.js。".to_string())?;
+        .map_err(|error| format!("网页动态提取需要 Node.js：{error}"))?;
     let script = extractor_script_path(ctx)?;
     let browser_mode = BrowserLaunchMode::from_settings(&ctx.settings);
     fs::create_dir_all(&profile_dir).map_err(|error| error.to_string())?;
